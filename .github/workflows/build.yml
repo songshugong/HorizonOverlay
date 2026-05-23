@@ -55,6 +55,12 @@ jobs:
             ninja-build \
             zlib1g-dev
 
+      - name: Install macOS system dependencies
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install gettext md4c ninja pkg-config
+
       - name: Set up MSVC
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1

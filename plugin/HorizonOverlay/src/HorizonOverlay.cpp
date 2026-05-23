@@ -47,6 +47,7 @@ constexpr int screenSpaceFillStepPx = 8;
 constexpr int fullscreenQuadCoordsPerVertex = 2;
 constexpr int fullscreenQuadVertexAttribIndex = 0;
 constexpr int maxShaderObstructionSamples = 256;
+constexpr double pi = 3.141592653589793238462643383279502884;
 
 struct ScreenPoint
 {
@@ -529,10 +530,10 @@ bool HorizonOverlay::vectorToAltAz(const Vec3d& direction, double& azDeg, double
     altDeg = qRadiansToDegrees(std::asin(qBound(-1.0, normalized[2], 1.0)));
 
     const double stelLongitude = std::atan2(normalized[1], normalized[0]);
-    double azRad = M_PI - stelLongitude;
-    azRad = std::fmod(azRad, 2.0 * M_PI);
+    double azRad = pi - stelLongitude;
+    azRad = std::fmod(azRad, 2.0 * pi);
     if (azRad < 0.0)
-        azRad += 2.0 * M_PI;
+        azRad += 2.0 * pi;
 
     azDeg = qRadiansToDegrees(azRad);
     return true;
@@ -976,7 +977,7 @@ Vec3d HorizonOverlay::altAzToVector(double azDeg, double altDeg) const
 
     // Stellarium FrameAltAz uses +x=south, +y=east, +z=zenith.
     // The input table uses standard compass azimuth: 0=north, 90=east.
-    const double stelLongitude = M_PI - azRad;
+    const double stelLongitude = pi - azRad;
     StelUtils::spheToRect(stelLongitude, altRad, result);
     return result;
 }
