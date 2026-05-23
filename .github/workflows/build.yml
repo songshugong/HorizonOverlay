@@ -25,7 +25,6 @@ jobs:
           - name: Linux
             os: ubuntu-24.04
             artifact: HorizonOverlay-linux
-            qt_arch: gcc_64
           - name: Windows
             os: windows-2022
             artifact: HorizonOverlay-windows
@@ -70,10 +69,19 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Install Qt
+        if: matrix.qt_arch != ''
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           arch: ${{ matrix.qt_arch }}
+          modules: qtcharts qtmultimedia qtpositioning qtserialport
+          cache: true
+
+      - name: Install Qt
+        if: matrix.qt_arch == ''
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
           modules: qtcharts qtmultimedia qtpositioning qtserialport
           cache: true
 
