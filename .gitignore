@@ -1,0 +1,10 @@
+.DS_Store
+build/
+cmake-build-*/
+*.user
+*.log
+
+# Local packaged plug-in binaries.
+*.dylib
+*.dll
+*.so

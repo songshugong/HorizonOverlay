@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 /path/to/libHorizonOverlay.dylib" >&2
+  exit 2
+fi
+
+plugin_lib="$1"
+if [[ ! -f "$plugin_lib" ]]; then
+  echo "Cannot find plugin library: $plugin_lib" >&2
+  exit 1
+fi
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+target_dir="$HOME/Library/Application Support/Stellarium/modules/HorizonOverlay"
+
+mkdir -p "$target_dir"
+cp "$plugin_lib" "$target_dir/libHorizonOverlay.dylib"
+
+if [[ ! -f "$target_dir/config.ini" ]]; then
+  cp "$repo_root/data/config.ini" "$target_dir/config.ini"
+fi
+
+if [[ ! -f "$target_dir/obstructions.txt" ]]; then
+  cp "$repo_root/data/obstructions.txt" "$target_dir/obstructions.txt"
+fi
+
+echo "Installed HorizonOverlay to:"
+echo "$target_dir"

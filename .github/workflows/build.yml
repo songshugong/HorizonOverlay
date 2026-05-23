@@ -1,0 +1,132 @@
+name: Build HorizonOverlay
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  STELLARIUM_TAG: v25.1
+  QT_VERSION: 6.8.1
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-14
+            artifact: HorizonOverlay-macos
+          - name: Linux
+            os: ubuntu-24.04
+            artifact: HorizonOverlay-linux
+          - name: Windows
+            os: windows-2022
+            artifact: HorizonOverlay-windows
+
+    steps:
+      - name: Checkout HorizonOverlay
+        uses: actions/checkout@v4
+        with:
+          path: horizon-overlay
+
+      - name: Checkout Stellarium
+        uses: actions/checkout@v4
+        with:
+          repository: Stellarium/stellarium
+          ref: ${{ env.STELLARIUM_TAG }}
+          path: stellarium
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            gettext \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libmd4c-dev \
+            libxkbcommon-x11-0 \
+            mesa-common-dev \
+            ninja-build \
+            zlib1g-dev
+
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: qtcharts qtmultimedia qtpositioning qtserialport
+          cache: true
+
+      - name: Add HorizonOverlay to Stellarium source tree
+        shell: bash
+        run: |
+          cmake -E copy_directory horizon-overlay/plugin/HorizonOverlay stellarium/plugins/HorizonOverlay
+          perl -0pi -e 's/(ADD_PLUGIN\(SimpleDrawLine 0\)\R)/$1ADD_PLUGIN(HorizonOverlay 1)\n/' stellarium/CMakeLists.txt
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake -S stellarium -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_PLUGIN_HORIZONOVERLAY=ON \
+            -DUSE_PLUGIN_ANGLEMEASURE=OFF \
+            -DUSE_PLUGIN_ARCHAEOLINES=OFF \
+            -DUSE_PLUGIN_CALENDARS=OFF \
+            -DUSE_PLUGIN_EQUATIONOFTIME=OFF \
+            -DUSE_PLUGIN_EXOPLANETS=OFF \
+            -DUSE_PLUGIN_HELLOSTELMODULE=OFF \
+            -DUSE_PLUGIN_LENSDISTORTIONESTIMATOR=OFF \
+            -DUSE_PLUGIN_METEORSHOWERS=OFF \
+            -DUSE_PLUGIN_NAVSTARS=OFF \
+            -DUSE_PLUGIN_NOVAE=OFF \
+            -DUSE_PLUGIN_OBSERVABILITY=OFF \
+            -DUSE_PLUGIN_OCULARS=OFF \
+            -DUSE_PLUGIN_OCULUS=OFF \
+            -DUSE_PLUGIN_ONLINEQUERIES=OFF \
+            -DUSE_PLUGIN_POINTERCOORDINATES=OFF \
+            -DUSE_PLUGIN_PULSARS=OFF \
+            -DUSE_PLUGIN_QUASARS=OFF \
+            -DUSE_PLUGIN_REMOTECONTROL=OFF \
+            -DUSE_PLUGIN_REMOTESYNC=OFF \
+            -DUSE_PLUGIN_SATELLITES=OFF \
+            -DUSE_PLUGIN_SCENERY3D=OFF \
+            -DUSE_PLUGIN_SIMPLEDRAWLINE=OFF \
+            -DUSE_PLUGIN_SOLARSYSTEMEDITOR=OFF \
+            -DUSE_PLUGIN_SUPERNOVAE=OFF \
+            -DUSE_PLUGIN_TELESCOPECONTROL=OFF \
+            -DUSE_PLUGIN_TEXTUSERINTERFACE=OFF \
+            -DUSE_PLUGIN_VTS=OFF
+
+      - name: Build plug-in
+        run: cmake --build build --target HorizonOverlay --parallel
+
+      - name: Package artifact
+        shell: bash
+        run: |
+          mkdir -p "artifact/HorizonOverlay"
+          plugin_lib="$(find build/plugins/HorizonOverlay/src -maxdepth 3 -type f \( -name 'libHorizonOverlay.*' -o -name 'HorizonOverlay.dll' \) | head -n 1)"
+          if [[ -z "$plugin_lib" ]]; then
+            echo "Could not find HorizonOverlay plug-in binary" >&2
+            exit 1
+          fi
+          cp "$plugin_lib" "artifact/HorizonOverlay/"
+          cp horizon-overlay/data/config.ini "artifact/HorizonOverlay/"
+          cp horizon-overlay/data/obstructions.txt "artifact/HorizonOverlay/"
+          cp horizon-overlay/README.md "artifact/"
+          cp -R horizon-overlay/docs "artifact/docs"
+          find artifact -maxdepth 3 -type f -print
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: artifact

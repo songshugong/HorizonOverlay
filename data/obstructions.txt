@@ -1,0 +1,9 @@
+# Az Alt
+# Azimuth: 0=north, 90=east, 180=south, 270=west.
+Az Alt
+0 16
+45 24
+90 34
+180 10
+270 46
+360 16
