@@ -160,6 +160,45 @@ jobs:
             build/CMakeFiles/CMakeError.log
           if-no-files-found: ignore
 
+      - name: Report failure log tail
+        if: failure() && runner.os != 'Windows'
+        shell: bash
+        run: |
+          log_file="build/horizonoverlay-build.log"
+          if [[ ! -f "$log_file" && -f build/CMakeFiles/CMakeConfigureLog.yaml ]]; then
+            log_file="build/CMakeFiles/CMakeConfigureLog.yaml"
+          fi
+          if [[ -f "$log_file" ]]; then
+            {
+              echo "### Failure log tail"
+              echo '```text'
+              tail -120 "$log_file"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            message="$(tail -40 "$log_file" | tr '\n' ' ' | cut -c1-3500)"
+            echo "::error title=Failure log tail::$message"
+          fi
+
+      - name: Report failure log tail
+        if: failure() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $logFile = "build/horizonoverlay-build.log"
+          if (!(Test-Path $logFile) -and (Test-Path "build/CMakeFiles/CMakeConfigureLog.yaml")) {
+            $logFile = "build/CMakeFiles/CMakeConfigureLog.yaml"
+          }
+          if (Test-Path $logFile) {
+            "### Failure log tail" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            "``````text" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            Get-Content $logFile -Tail 120 | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            "``````" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            $message = (Get-Content $logFile -Tail 40) -join " "
+            if ($message.Length -gt 3500) {
+              $message = $message.Substring(0, 3500)
+            }
+            Write-Output "::error title=Failure log tail::$message"
+          }
+
       - name: Package artifact
         shell: bash
         run: |
