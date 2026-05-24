@@ -18,10 +18,10 @@ jobs:
       matrix:
         include:
           - name: macOS
-            os: macos-13
+            os: macos-14
             artifact: HorizonOverlay-macos
             qt_arch: clang_64
-            cmake_osx_arch: x86_64
+            cmake_osx_arch: arm64
           - name: Linux
             os: ubuntu-24.04
             artifact: HorizonOverlay-linux
@@ -192,11 +192,19 @@ jobs:
             "``````text" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
             Get-Content $logFile -Tail 120 | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
             "``````" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-            $message = (Get-Content $logFile -Tail 40) -join " "
+            $lines = Get-Content $logFile
+            $interesting = $lines | Select-String -Pattern "LNK[0-9]+|LINK :|fatal error|unresolved external|undefined reference|FAILED:|error " | ForEach-Object { $_.Line }
+            if (!$interesting) {
+              $interesting = $lines | Select-Object -Last 80
+            }
+            $message = ($interesting | Select-Object -Last 35) -join " "
+            $message = $message -replace "%", "%25"
+            $message = $message -replace "`r", "%0D"
+            $message = $message -replace "`n", "%0A"
             if ($message.Length -gt 3500) {
               $message = $message.Substring(0, 3500)
             }
-            Write-Output "::error title=Failure log tail::$message"
+            Write-Output "::error title=Filtered failure log::$message"
           }
 
       - name: Package artifact
