@@ -62,7 +62,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install gettext glm md4c ninja pkg-config
+          brew install gettext md4c ninja pkg-config
 
       - name: Set up MSVC
         if: runner.os == 'Windows'
@@ -102,6 +102,7 @@ jobs:
           cmake -S stellarium -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             "${cmake_extra[@]}" \
+            -DENABLE_SHOWMYSKY=OFF \
             -DUSE_PLUGIN_ANGLEMEASURE=OFF \
             -DUSE_PLUGIN_ARCHAEOLINES=OFF \
             -DUSE_PLUGIN_CALENDARS=OFF \
