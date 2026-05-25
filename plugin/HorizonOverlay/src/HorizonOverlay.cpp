@@ -2,9 +2,11 @@
 
 #include "StelApp.hpp"
 #include "StelCore.hpp"
+#include "StelFileMgr.hpp"
 #include "StelPainter.hpp"
 #include "StelProjector.hpp"
 #include "StelOpenGL.hpp"
+#include "StelTranslator.hpp"
 #include "StelUtils.hpp"
 #include "StelVertexArray.hpp"
 
@@ -24,7 +26,9 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QPushButton>
+#include <QLocale>
 #include <QSlider>
+#include <QTranslator>
 #include <QVector2D>
 #include <QVector4D>
 #include <QVBoxLayout>
@@ -135,10 +139,10 @@ StelPluginInfo HorizonOverlayStelPluginInterface::getPluginInfo() const
 {
     StelPluginInfo info;
     info.id = "HorizonOverlay";
-    info.displayedName = "Horizon Overlay";
+    info.displayedName = N_("Horizon Overlay");
     info.authors = "Song Zihan / Codex";
     info.contact = "";
-    info.description = "Draws a transparent local obstruction horizon overlay above the normal Stellarium landscape.";
+    info.description = N_("Draws a transparent local obstruction horizon overlay above the normal Stellarium landscape.");
     info.version = HORIZONOVERLAY_PLUGIN_VERSION;
     info.license = HORIZONOVERLAY_PLUGIN_LICENSE;
     return info;
@@ -169,6 +173,7 @@ void HorizonOverlay::init()
 {
     qDebug() << "[HorizonOverlay] init";
 
+    loadTranslator();
     loadSettings();
     reloadObstructionTable();
 }
@@ -612,13 +617,48 @@ std::string HorizonOverlay::configPath() const
 
 std::string HorizonOverlay::moduleDirPath() const
 {
-    const char* home = std::getenv("HOME");
-    if (!home || !*home)
-        return {};
+    return (StelFileMgr::getUserDir() + "/modules/HorizonOverlay").toStdString();
+}
 
-    std::string path(home);
-    path += "/Library/Application Support/Stellarium/modules/HorizonOverlay";
-    return path;
+void HorizonOverlay::loadTranslator()
+{
+    const QString moduleDir = QString::fromStdString(moduleDirPath());
+    if (moduleDir.isEmpty())
+        return;
+
+    QString localeName = QLocale::system().name();
+    if (StelTranslator::globalTranslator)
+        localeName = StelTranslator::globalTranslator->getTrueLocaleName();
+
+    localTranslator = std::make_unique<QTranslator>();
+    const QString translationDir = moduleDir + "/translations/horizonoverlay";
+    bool loaded = localTranslator->load(localeName + ".qm", translationDir);
+    if (!loaded)
+    {
+        const int separator = localeName.indexOf('_');
+        if (separator > 0)
+            loaded = localTranslator->load(localeName.left(separator) + ".qm", translationDir);
+    }
+
+    if (!loaded || localTranslator->isEmpty())
+    {
+        localTranslator.reset();
+        return;
+    }
+
+    qDebug() << "[HorizonOverlay] Loaded translations for" << localeName;
+}
+
+QString HorizonOverlay::translateUi(const char* text) const
+{
+    if (localTranslator)
+    {
+        const QString translated = localTranslator->translate("", text);
+        if (!translated.isEmpty())
+            return translated;
+    }
+
+    return q_(text);
 }
 
 std::string HorizonOverlay::resolveObstructionPath(const std::string& path) const
@@ -716,7 +756,7 @@ std::string HorizonOverlay::fillColorHex() const
 void HorizonOverlay::createSettingsDialog()
 {
     settingsDialog = new QDialog();
-    settingsDialog->setWindowTitle("Horizon Overlay Settings");
+    settingsDialog->setWindowTitle(translateUi("Horizon Overlay Settings"));
     settingsDialog->setAttribute(Qt::WA_DeleteOnClose, false);
     settingsDialog->setStyleSheet(
         "QDialog { background-color: #2f3331; color: #e8e8e8; }"
@@ -734,15 +774,15 @@ void HorizonOverlay::createSettingsDialog()
     auto* grid = new QGridLayout();
     mainLayout->addLayout(grid);
 
-    auto* visibleBox = new QCheckBox("Show overlay");
+    auto* visibleBox = new QCheckBox(translateUi("Show overlay"));
     visibleBox->setChecked(visible);
     grid->addWidget(visibleBox, 0, 0, 1, 2);
 
-    auto* fillBox = new QCheckBox("Show filled obstruction area");
+    auto* fillBox = new QCheckBox(translateUi("Show filled obstruction area"));
     fillBox->setChecked(drawFill);
     grid->addWidget(fillBox, 1, 0, 1, 2);
 
-    auto* lineBox = new QCheckBox("Show outline");
+    auto* lineBox = new QCheckBox(translateUi("Show outline"));
     lineBox->setChecked(drawLine);
     grid->addWidget(lineBox, 2, 0, 1, 2);
 
@@ -753,18 +793,18 @@ void HorizonOverlay::createSettingsDialog()
         return slider;
     };
 
-    auto* fillOpacityLabel = new QLabel(QString("Fill opacity: %1%").arg(static_cast<int>(std::round(fillOpacity * 100.0f))));
+    auto* fillOpacityLabel = new QLabel(translateUi("Fill opacity: %1%").arg(static_cast<int>(std::round(fillOpacity * 100.0f))));
     auto* fillOpacitySlider = makeSlider(fillOpacity);
     grid->addWidget(fillOpacityLabel, 3, 0);
     grid->addWidget(fillOpacitySlider, 3, 1);
 
-    auto* lineOpacityLabel = new QLabel(QString("Line opacity: %1%").arg(static_cast<int>(std::round(lineOpacity * 100.0f))));
+    auto* lineOpacityLabel = new QLabel(translateUi("Line opacity: %1%").arg(static_cast<int>(std::round(lineOpacity * 100.0f))));
     auto* lineOpacitySlider = makeSlider(lineOpacity);
     grid->addWidget(lineOpacityLabel, 4, 0);
     grid->addWidget(lineOpacitySlider, 4, 1);
 
-    auto* fillColorButton = new QPushButton("Fill color");
-    auto* lineColorButton = new QPushButton("Line color");
+    auto* fillColorButton = new QPushButton(translateUi("Fill color"));
+    auto* lineColorButton = new QPushButton(translateUi("Line color"));
     auto applyButtonColor = [](QPushButton* button, const std::string& color) {
         const QColor background(QString::fromStdString(color));
         const QString textColor = background.lightness() > 150 ? "#101010" : "#f4f4f4";
@@ -777,14 +817,14 @@ void HorizonOverlay::createSettingsDialog()
     grid->addWidget(lineColorButton, 5, 1);
 
     auto* fileEdit = new QLineEdit(QString::fromStdString(obstructionPath));
-    auto* browseButton = new QPushButton("Choose file...");
-    auto* reloadButton = new QPushButton("Reload table");
-    grid->addWidget(new QLabel("Obstruction table:"), 6, 0);
+    auto* browseButton = new QPushButton(translateUi("Choose file..."));
+    auto* reloadButton = new QPushButton(translateUi("Reload table"));
+    grid->addWidget(new QLabel(translateUi("Obstruction table:")), 6, 0);
     grid->addWidget(fileEdit, 6, 1);
     grid->addWidget(browseButton, 7, 0);
     grid->addWidget(reloadButton, 7, 1);
 
-    auto* closeButton = new QPushButton("Close");
+    auto* closeButton = new QPushButton(translateUi("Close"));
     mainLayout->addWidget(closeButton);
 
     connect(visibleBox, &QCheckBox::toggled, settingsDialog, [this](bool checked) {
@@ -801,17 +841,17 @@ void HorizonOverlay::createSettingsDialog()
     });
     connect(fillOpacitySlider, &QSlider::valueChanged, settingsDialog, [this, fillOpacityLabel](int value) {
         fillOpacity = static_cast<float>(value) / 100.0f;
-        fillOpacityLabel->setText(QString("Fill opacity: %1%").arg(value));
+        fillOpacityLabel->setText(translateUi("Fill opacity: %1%").arg(value));
         saveSettings();
     });
     connect(lineOpacitySlider, &QSlider::valueChanged, settingsDialog, [this, lineOpacityLabel](int value) {
         lineOpacity = static_cast<float>(value) / 100.0f;
-        lineOpacityLabel->setText(QString("Line opacity: %1%").arg(value));
+        lineOpacityLabel->setText(translateUi("Line opacity: %1%").arg(value));
         saveSettings();
     });
     connect(fillColorButton, &QPushButton::clicked, settingsDialog, [this, fillColorButton, applyButtonColor]() {
         const QColor initial(QString::fromStdString(fillColorHex()));
-        const QColor color = QColorDialog::getColor(initial, settingsDialog, "Fill color");
+        const QColor color = QColorDialog::getColor(initial, settingsDialog, translateUi("Fill color"));
         if (!color.isValid())
             return;
         setFillColorFromHex(color.name(QColor::HexRgb).toStdString());
@@ -820,7 +860,7 @@ void HorizonOverlay::createSettingsDialog()
     });
     connect(lineColorButton, &QPushButton::clicked, settingsDialog, [this, lineColorButton, applyButtonColor]() {
         const QColor initial(QString::fromStdString(lineColorHex()));
-        const QColor color = QColorDialog::getColor(initial, settingsDialog, "Line color");
+        const QColor color = QColorDialog::getColor(initial, settingsDialog, translateUi("Line color"));
         if (!color.isValid())
             return;
         setLineColorFromHex(color.name(QColor::HexRgb).toStdString());
@@ -834,9 +874,9 @@ void HorizonOverlay::createSettingsDialog()
     connect(browseButton, &QPushButton::clicked, settingsDialog, [this, fileEdit]() {
         const QString selected = QFileDialog::getOpenFileName(
             settingsDialog,
-            "Choose obstruction table",
+            translateUi("Choose obstruction table"),
             QString::fromStdString(resolveObstructionPath(obstructionPath)),
-            "Text files (*.txt *.hrz *.csv);;All files (*)");
+            translateUi("Text files (*.txt *.hrz *.csv);;All files (*)"));
         if (selected.isEmpty())
             return;
 

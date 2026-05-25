@@ -26,5 +26,14 @@ if [[ ! -f "$target_dir/obstructions.txt" ]]; then
   cp "$repo_root/data/obstructions.txt" "$target_dir/obstructions.txt"
 fi
 
+if command -v lconvert >/dev/null 2>&1; then
+  mkdir -p "$target_dir/translations/horizonoverlay"
+  for po_file in "$repo_root"/plugin/HorizonOverlay/translations/horizonoverlay/*.po; do
+    [[ -f "$po_file" ]] || continue
+    lang="$(basename "$po_file" .po)"
+    lconvert -i "$po_file" -o "$target_dir/translations/horizonoverlay/$lang.qm"
+  done
+fi
+
 echo "Installed HorizonOverlay to:"
 echo "$target_dir"

@@ -16,6 +16,8 @@ class QOpenGLBuffer;
 class QOpenGLShaderProgram;
 class QOpenGLVertexArrayObject;
 class QDialog;
+class QString;
+class QTranslator;
 class StelPainter;
 
 class HorizonOverlay : public StelModule
@@ -60,6 +62,8 @@ private:
     std::string fillColorHex() const;
     void createSettingsDialog();
     void reloadObstructionTable();
+    void loadTranslator();
+    QString translateUi(const char* text) const;
     bool drawShaderFill(StelPainter& painter, const StelProjectorP& projector);
     void drawCpuScreenSpaceFill(StelPainter& painter, const StelProjectorP& projector) const;
     void drawLegacyFill(StelPainter& painter, const StelProjectorP& projector, const SphericalCap& cameraCap) const;
@@ -80,6 +84,7 @@ private:
     float fillRgb[3];
     std::string obstructionPath;
     QDialog* settingsDialog;
+    std::unique_ptr<QTranslator> localTranslator;
 
     std::vector<Sample> samples;
     std::vector<RenderSample> geometry;

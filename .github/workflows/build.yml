@@ -234,9 +234,13 @@ jobs:
           cp "$plugin_lib" "artifact/HorizonOverlay/"
           cp horizon-overlay/data/config.ini "artifact/HorizonOverlay/"
           cp horizon-overlay/data/obstructions.txt "artifact/HorizonOverlay/"
+          if [[ -d build/plugins/HorizonOverlay/translations/horizonoverlay ]]; then
+            mkdir -p "artifact/HorizonOverlay/translations"
+            cp -R build/plugins/HorizonOverlay/translations/horizonoverlay "artifact/HorizonOverlay/translations/"
+          fi
           cp horizon-overlay/README.md "artifact/"
           cp -R horizon-overlay/docs "artifact/docs"
-          find artifact -maxdepth 3 -type f -print
+          find artifact -maxdepth 5 -type f -print
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

@@ -26,10 +26,15 @@ The current target is Stellarium `25.1.0` with Qt `6.8.x`. Other versions may wo
 ├── plugin/
 │   └── HorizonOverlay/
 │       ├── CMakeLists.txt
-│       └── src/
-│           ├── CMakeLists.txt
-│           ├── HorizonOverlay.cpp
-│           └── HorizonOverlay.hpp
+│       ├── src/
+│       │   ├── CMakeLists.txt
+│       │   ├── HorizonOverlay.cpp
+│       │   └── HorizonOverlay.hpp
+│       └── translations/
+│           └── horizonoverlay/
+│               ├── POTFILES.in
+│               ├── horizonoverlay.pot
+│               └── zh_CN.po
 └── scripts/
     └── install-to-user-modules.sh
 ```
@@ -87,6 +92,7 @@ This repository includes `.github/workflows/build.yml`. On push, pull request, o
 - Windows: uploads `HorizonOverlay-windows`
 
 Each artifact contains a `HorizonOverlay/` module folder with the plug-in binary, `config.ini`, and `obstructions.txt`, plus the README and format documentation.
+Artifacts also include compiled plug-in-local translations under `HorizonOverlay/translations/horizonoverlay/`.
 
 ## Install
 
@@ -118,7 +124,10 @@ HorizonOverlay/
 ├── libHorizonOverlay.so      # Linux
 ├── libHorizonOverlay.dll     # Windows
 ├── config.ini
-└── obstructions.txt
+├── obstructions.txt
+└── translations/
+    └── horizonoverlay/
+        └── zh_CN.qm
 ```
 
 On macOS you can also use the helper script:
@@ -128,6 +137,24 @@ On macOS you can also use the helper script:
 ```
 
 The script installs the library as `libHorizonOverlay.dylib`. It creates default `config.ini` and `obstructions.txt` only when those files do not already exist, so user settings are not overwritten.
+If Qt's `lconvert` is available, the script also compiles and installs bundled plug-in translations.
+
+## Translations
+
+Source strings follow Stellarium's built-in plug-in convention:
+
+- `N_("...")` marks plug-in metadata strings for extraction.
+- `q_("...")` is used as the normal Stellarium translation fallback.
+- `translateUi("...")` marks plug-in-local runtime UI strings.
+- `plugin/HorizonOverlay/translations/horizonoverlay/POTFILES.in` lists source files for `xgettext`.
+
+Because this repository ships HorizonOverlay as a user-directory dynamic plug-in, it also builds a small plug-in-local translation domain named `horizonoverlay`. At runtime the module first tries:
+
+```text
+HorizonOverlay/translations/horizonoverlay/<locale>.qm
+```
+
+and falls back to Stellarium's global `q_()` translations if no local translation is available. Simplified Chinese is currently provided as `zh_CN.po` and compiled to `zh_CN.qm` in GitHub Actions.
 
 ## Configuration
 
